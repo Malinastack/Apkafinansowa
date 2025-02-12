@@ -1,50 +1,46 @@
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel, Field
-from typing import List, Annotated
-import models
-from database import engine, SessionLocal, Base
-from sqlalchemy.orm import Session
-
+from database import engine
+from sqlmodel import Session, SQLModel, select
+from models import User, Expense, UserCreate, UserPublic
 
 app = FastAPI()
 
-Base.metadata.create_all(bind=engine)
-
-class UserCreate(BaseModel):
-    name:str
-    balance: float
-    expense_list: list = Field(default=[])
-
-class ExpenseCreate(BaseModel):
-    amount: float
-    name: str
-    payer_id: int
-
-
-def get_db():
-    db = SessionLocal()
-    try: 
-        yield db
-    finally:
-        db.close()
-
-db_dependency = Annotated[Session, Depends(get_db)]
+SQLModel.metadata.create_all(engine)
 
 @app.get("/")
 def root():
     return "Siemanko"
 
-@app.post("/create_user")
-async def create_user(user: UserCreate, db: db_dependency):
-    db_user = models.Users(name = user.name, balance = user.balance)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+@app.post("/create_user", response_model=UserPublic)
+async def create_user(user: UserCreate):
+    with Session(engine) as session:
+        db_user = User.model_validate(user)
+        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
+        return db_user
 
 @app.post("/create_expense")
-async def create_expense(expense: ExpenseCreate, db: db_dependency):
-    db_expense = models.Expense(name = expense.name, amount = expense.amount, payer_id = expense.payer_id)
-    db.add(db_expense)
-    db.commit()
-    db.refresh(db_expense)
+async def create_expense(expense: Expense):
+    with Session(engine) as session:
+        session.add(expense)
+        session.commit()
+        session.refresh(expense)
+        return expense
+    
+
+@app.get("/get_users", response_model=list[UserPublic])
+async def get_users():
+    with Session(engine) as session:
+        results = session.exec(select(User)).all()
+        return results
+    
+@app.get("/users/{user_id}", response_model=UserPublic)
+async def get_user(user_id:int):
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+        
 
