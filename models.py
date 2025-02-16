@@ -15,6 +15,7 @@ class UserCreate(UserBase):
 class UserPublic(UserBase):
     id: int
 
+
 class UserUpdate(SQLModel):
     name: str | None = None
     balance: float | None = None
@@ -39,5 +40,12 @@ class ExpenseUpdate(SQLModel):
     name: str | None = None
     amount: float | None = None
     user_id: int | None = None
+
+
+class UserPublicWithExpenses(UserBase):
+    expense: list[ExpensePublic] = []
+
+class ExpensePublicWithUser(ExpenseBase):
+    user: UserPublic | None = None
 
 

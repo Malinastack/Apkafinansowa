@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
 from database import engine
 from sqlmodel import Session, SQLModel, select
-from models import User, Expense, UserCreate, UserPublic, UserUpdate, ExpenseCreate, ExpensePublic, ExpenseUpdate
+from models import User, Expense, UserCreate, UserPublic, UserUpdate, ExpenseCreate, ExpensePublic, ExpenseUpdate, ExpensePublicWithUser, UserPublicWithExpenses
 
 app = FastAPI()
 
@@ -34,7 +34,7 @@ async def get_users(*, session: Session = Depends(get_session)):
     results = session.exec(select(User)).all()
     return results
     
-@app.get("/users/{user_id}", response_model=UserPublic)
+@app.get("/users/{user_id}", response_model=UserPublicWithExpenses)
 async def get_user(*, session: Session = Depends(get_session), user_id:int):
     user = session.get(User, user_id)
     if not user:
@@ -80,7 +80,7 @@ async def get_expenses(*, session: Session = Depends(get_session)):
     result = session.exec(select(Expense)).all()
     return result
 
-@app.get("/expenses/{expense_id}", response_model=ExpensePublic)
+@app.get("/expenses/{expense_id}", response_model=ExpensePublicWithUser)
 async def get_expense(*, session: Session = Depends(get_session), expense_id: int):
     db_expense = session.get(Expense, expense_id)
     if not db_expense:
